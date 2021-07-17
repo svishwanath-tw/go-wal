@@ -1,0 +1,5 @@
+fileignoreconfig:
+- filename: log.go
+  checksum: d09b84e7d455fa1d15230ea32e45d169d4abbe8b419a177a3943efcd073964e5
+- filename: main.go
+  checksum: f68d4d90c320b7ff400bb7d07f619df2213252a86753a5a7ed10d20ffeda9e33

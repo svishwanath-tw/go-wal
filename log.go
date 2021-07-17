@@ -34,16 +34,19 @@ func NewWALog(path string) *WALog {
 	return log
 }
 
-func (l *WALog) Read(offset int) ([]byte, []byte) {
-	fileOffset := l.messageOffsets[offset]
+func (l *WALog) Read(offset int) ([]byte, []byte, error) {
+	if offset > l.latestOffset {
+		return nil, nil, fmt.Errorf("Offset out of bounds %v", offset)
+	}
 
+	fileOffset := l.messageOffsets[offset]
 	l.file.Seek(fileOffset, os.SEEK_SET)
 	messageLength := int64(0)
 	binary.Read(l.file, binary.LittleEndian, &messageLength)
 
 	key := readWithLength(l.file)
 	data := readWithLength(l.file)
-	return key, data
+	return key, data, nil
 }
 
 func readWithLength(file *os.File) []byte {
@@ -52,10 +55,6 @@ func readWithLength(file *os.File) []byte {
 	message := make([]byte, messageLength, messageLength)
 	file.Read(message)
 	return message
-}
-
-func (l *WALog) ReadKey(key []byte) []byte {
-	return []byte{}
 }
 
 func (l *WALog) Append(key, data []byte) int {
@@ -108,8 +107,18 @@ func (l *WALog) Close() error {
 }
 
 func (l *WALog) ShowAllMessages() {
-	for offset := 0; offset < l.latestOffset; offset++ {
-		key, data := l.Read(offset)
+	for offset := 0; offset <= l.latestOffset; offset++ {
+		key, data, _ := l.Read(offset)
 		fmt.Printf("offset: %v, key: %v, data: %v\n", offset, string(key), string(data))
 	}
+}
+
+func (l *WALog) ReadKey(searchKey []byte) ([]byte, error) {
+	for offset := l.latestOffset; offset > -1; offset-- {
+		key, data, _ := l.Read(offset)
+		if bytes.Equal(searchKey, key) {
+			return data, nil
+		}
+	}
+	return nil, fmt.Errorf("Could not find key %v", string(searchKey))
 }
